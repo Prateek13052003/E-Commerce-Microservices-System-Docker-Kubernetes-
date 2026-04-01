@@ -1,0 +1,114 @@
+
+networks:
+  ecommerce-net:
+    driver: bridge
+
+services:
+
+  # ── Databases ──────────────────────────────────────────
+  mongo-users:
+    image: mongo:7
+    container_name: mongo-users
+    networks: [ecommerce-net]
+    volumes: [mongo-users-data:/data/db]
+    healthcheck:
+      test: ["CMD","mongosh","--eval","db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-products:
+    image: mongo:7
+    container_name: mongo-products
+    networks: [ecommerce-net]
+    volumes: [mongo-products-data:/data/db]
+    healthcheck:
+      test: ["CMD","mongosh","--eval","db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-orders:
+    image: mongo:7
+    container_name: mongo-orders
+    networks: [ecommerce-net]
+    volumes: [mongo-orders-data:/data/db]
+    healthcheck:
+      test: ["CMD","mongosh","--eval","db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Microservices ──────────────────────────────────────
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    networks: [ecommerce-net]
+    environment:
+      MONGO_URI: mongodb://mongo-users:27017/users
+      JWT_SECRET: your-super-secret-jwt-key-change-in-prod
+      PORT: 3001
+    depends_on:
+      mongo-users:
+        condition: service_healthy
+    restart: unless-stopped
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    networks: [ecommerce-net]
+    environment:
+      MONGO_URI: mongodb://mongo-products:27017/products
+      PORT: 3002
+    depends_on:
+      mongo-products:
+        condition: service_healthy
+    restart: unless-stopped
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    networks: [ecommerce-net]
+    environment:
+      MONGO_URI: mongodb://mongo-orders:27017/orders
+      PRODUCT_SERVICE_URL: http://product-service:3002
+      NOTIFICATION_SERVICE_URL: http://notification-service:3004
+      PORT: 3003
+    depends_on:
+      mongo-orders:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    restart: unless-stopped
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    networks: [ecommerce-net]
+    environment:
+      PORT: 3004
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    networks: [ecommerce-net]
+    ports:
+      - "3000:3000"
+    environment:
+      USER_SERVICE_URL:    http://user-service:3001
+      PRODUCT_SERVICE_URL: http://product-service:3002
+      ORDER_SERVICE_URL:   http://order-service:3003
+      NOTIFICATION_SERVICE_URL: http://notification-service:3004
+      PORT: 3000
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - notification-service
+    restart: unless-stopped
+
+volumes:
+  mongo-users-data:
+  mongo-products-data:
+  mongo-orders-data:
