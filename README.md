@@ -2,7 +2,7 @@
 
 ## 📌 Overview
 
-This project is a **scalable microservices-based E-Commerce system** built using **Node.js, Docker, and Kubernetes**.
+This project is a **scalable microservices-based E-Commerce system** built using **Js, Docker, and Kubernetes**.
 It demonstrates real-world architecture with **API Gateway, service communication, and container orchestration**.
 
 ---
