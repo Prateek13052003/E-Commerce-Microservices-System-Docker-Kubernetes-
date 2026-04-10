@@ -1,10 +1,11 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
 const cors = require('cors');
-app.use(cors());
+require('dotenv').config();
+
 const app = express();
+app.use(cors());
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use(limiter);
